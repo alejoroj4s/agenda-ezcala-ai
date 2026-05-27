@@ -141,6 +141,32 @@ export function CalendarApp({ initialEvents, initialServices, user }: CalendarAp
     }
   }, [loadEvents, toast])
 
+  // Silent background poll every 30s — detects new events from API without disrupting the UI
+  useEffect(() => {
+    const POLL_INTERVAL = 30_000
+    let lastCount = events.length
+
+    const poll = async () => {
+      try {
+        const range = getRangeForView(view, currentDate)
+        const params = new URLSearchParams({ from: range.from.toISOString(), to: range.to.toISOString() })
+        const res = await fetch(`/api/events?${params.toString()}`)
+        if (!res.ok) return
+        const data = await res.json()
+        const incoming = data.events as CalendarEvent[]
+        if (incoming.length !== lastCount) {
+          lastCount = incoming.length
+          setEvents(incoming)
+        }
+      } catch {
+        // silent — don't show errors for background polling
+      }
+    }
+
+    const id = setInterval(() => void poll(), POLL_INTERVAL)
+    return () => clearInterval(id)
+  }, [view, currentDate])
+
   const filteredEvents = useMemo(
     () =>
       events
