@@ -1,0 +1,78 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tokens   UserToken[]
+  services Service[]
+  events   Event[]
+}
+
+model UserToken {
+  id        String    @id @default(cuid())
+  token     String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label     String?
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+}
+
+model Service {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  duration    Int      @default(60)
+  bufferTime  Int      @default(0)
+  color       String   @default("#25D366")
+  maxBookings Int      @default(1)
+  isActive    Boolean  @default(true)
+  schedule    Json     @default("{\"0\":{\"active\":false},\"1\":{\"active\":true,\"start\":\"09:00\",\"end\":\"17:00\"},\"2\":{\"active\":true,\"start\":\"09:00\",\"end\":\"17:00\"},\"3\":{\"active\":true,\"start\":\"09:00\",\"end\":\"17:00\"},\"4\":{\"active\":true,\"start\":\"09:00\",\"end\":\"17:00\"},\"5\":{\"active\":true,\"start\":\"09:00\",\"end\":\"17:00\"},\"6\":{\"active\":false}}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  events      Event[]
+}
+
+model Event {
+  id            String      @id @default(cuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  serviceId     String?
+  service       Service?    @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  title         String
+  description   String?
+  startTime     DateTime
+  endTime       DateTime
+  attendeeName  String?
+  attendeeEmail String?
+  attendeePhone String?
+  status        EventStatus @default(SCHEDULED)
+  notes         String?
+  color         String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([userId, startTime, endTime])
+  @@index([serviceId, startTime, endTime])
+}
+
+enum EventStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
