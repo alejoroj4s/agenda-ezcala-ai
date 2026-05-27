@@ -266,8 +266,8 @@ export function CalendarApp({ initialEvents, initialServices, user }: CalendarAp
           open={eventModalOpen}
           onClose={() => setEventModalOpen(false)}
           onSave={async (data) => {
-            const startTime = `${data.startDate}T${data.startTime}:00`
-            const endTime = `${data.endDate}T${data.endTime}:00`
+            const startTime = new Date(`${data.startDate}T${data.startTime}:00`).toISOString()
+            const endTime = new Date(`${data.endDate}T${data.endTime}:00`).toISOString()
             const payload = {
               title: data.title,
               description: data.description,
