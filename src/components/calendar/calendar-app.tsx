@@ -1,7 +1,7 @@
 'use client'
 
 import { addDays, addHours, endOfDay, endOfMonth, endOfWeek, isSameDay, setHours, setMinutes, startOfDay, startOfMonth, startOfWeek } from 'date-fns'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 import { CalendarDayView } from '@/components/calendar/calendar-day-view'
@@ -141,10 +141,15 @@ export function CalendarApp({ initialEvents, initialServices, user }: CalendarAp
     }
   }, [loadEvents, toast])
 
-  // Silent background poll every 30s — detects new events from API without disrupting the UI
+  // Silent background poll every 30s — detects new/cancelled events from API without disrupting the UI.
+  // Uses a ref to track current event IDs so the closure always sees fresh data.
+  const eventIdsRef = useRef<string>(events.map((e) => e.id).sort().join(','))
+  useEffect(() => {
+    eventIdsRef.current = events.map((e) => e.id).sort().join(',')
+  }, [events])
+
   useEffect(() => {
     const POLL_INTERVAL = 30_000
-    let lastCount = events.length
 
     const poll = async () => {
       try {
@@ -154,12 +159,12 @@ export function CalendarApp({ initialEvents, initialServices, user }: CalendarAp
         if (!res.ok) return
         const data = await res.json()
         const incoming = data.events as CalendarEvent[]
-        if (incoming.length !== lastCount) {
-          lastCount = incoming.length
+        const incomingKey = incoming.map((e) => e.id).sort().join(',')
+        if (incomingKey !== eventIdsRef.current) {
           setEvents(incoming)
         }
       } catch {
-        // silent — don't show errors for background polling
+        // silent — don't surface errors for background polling
       }
     }
 
