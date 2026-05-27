@@ -6,10 +6,15 @@ import { serializeEvent } from '@/lib/serializers'
 
 export const OPTIONS = options
 
-export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+// POST /api/v1/events/cancel?id=XXX
+// PATCH /api/v1/events/cancel?id=XXX
+async function cancelEvent(request: Request) {
   const auth = await getApiAuthContext(request)
   if (!auth) return error('Unauthorized', 401)
-  const { id } = await params
+
+  const url = new URL(request.url)
+  const id = url.searchParams.get('id')
+  if (!id) return error('id query param is required', 400)
 
   const existing = await findOwnedEvent(auth.user.id, id)
   if (!existing) return error('Event not found', 404)
@@ -17,3 +22,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const event = await prisma.event.update({ where: { id }, data: { status: 'CANCELLED' }, include: { service: true } })
   return json({ event: serializeEvent(event) })
 }
+
+export const POST = cancelEvent
+export const PATCH = cancelEvent
